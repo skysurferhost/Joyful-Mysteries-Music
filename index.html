@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Rosary Audio Player</title>
+<title>Joyful Mysteries Audio</title>
 
 <style>
   body {
     margin: 0;
-    padding: 0;
     background: #111;
     font-family: Arial, sans-serif;
     color: #fff;
@@ -30,14 +29,13 @@
 
   audio {
     width: 100%;
-    margin: 8px 0;
   }
 
   .controls {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    margin-top: 10px;
+    gap: 14px;
+    margin-top: 12px;
   }
 
   .controls button {
@@ -78,9 +76,9 @@
 <body>
 
 <div class="player">
-  <div class="track-title" id="trackTitle">Joyful Mysteries 1</div>
+  <div class="track-title" id="trackTitle"></div>
 
-  <audio id="audio" controls></audio>
+  <audio id="audio" controls preload="metadata"></audio>
 
   <div class="controls">
     <button onclick="prevTrack()">⏮</button>
@@ -95,13 +93,12 @@
   const tracks = [
     {
       title: "Joyful Mysteries 1",
-      src: "./music/joyful-1.wav"
+      src: "./joyful-mysteries-1.mp3"
     },
     {
       title: "Joyful Mysteries 2",
-      src: "./music/joyful-2.wav"
+      src: "./joyful-mysteries-2.mp3"
     }
-    // 👉 Add more tracks here
   ];
 
   let currentTrack = 0;
@@ -118,30 +115,27 @@
   }
 
   function playPause() {
-    if (audio.paused) audio.play();
-    else audio.pause();
+    audio.paused ? audio.play() : audio.pause();
   }
 
   function nextTrack() {
-    currentTrack = (currentTrack + 1) % tracks.length;
-    loadTrack(currentTrack);
+    loadTrack((currentTrack + 1) % tracks.length);
   }
 
   function prevTrack() {
-    currentTrack = (currentTrack - 1 + tracks.length) % tracks.length;
-    loadTrack(currentTrack);
+    loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
   }
 
   audio.addEventListener("ended", nextTrack);
 
   function updatePlaylist() {
     playlistEl.innerHTML = "";
-    tracks.forEach((track, index) => {
-      const div = document.createElement("div");
-      div.textContent = track.title;
-      div.className = "playlist-item" + (index === currentTrack ? " active" : "");
-      div.onclick = () => loadTrack(index);
-      playlistEl.appendChild(div);
+    tracks.forEach((track, i) => {
+      const item = document.createElement("div");
+      item.textContent = track.title;
+      item.className = "playlist-item" + (i === currentTrack ? " active" : "");
+      item.onclick = () => loadTrack(i);
+      playlistEl.appendChild(item);
     });
   }
 
