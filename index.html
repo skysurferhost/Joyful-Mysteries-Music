@@ -28,7 +28,6 @@
     min-height: 20px;
   }
 
-  /* Timeline */
   .timeline {
     width: 100%;
     height: 6px;
@@ -38,14 +37,12 @@
     margin: 14px 0;
     position: relative;
   }
-
   .timeline-progress {
     height: 100%;
     width: 0%;
     background: #fff;
     border-radius: 4px;
   }
-
   .marker {
     position: absolute;
     top: -4px;
@@ -54,7 +51,6 @@
     background: rgba(255,255,255,0.4);
   }
 
-  /* Controls */
   .controls {
     display: flex;
     align-items: center;
@@ -74,12 +70,10 @@
     align-items: center;
     justify-content: center;
   }
-
   .btn:active {
     transform: scale(0.95);
   }
 
-  /* Play / Pause */
   .play-icon {
     width: 0;
     height: 0;
@@ -88,26 +82,23 @@
     border-bottom: 8px solid transparent;
     margin-left: 2px;
   }
-
   .pause-icon {
     display: flex;
     gap: 4px;
   }
-
   .pause-icon span {
     width: 5px;
     height: 16px;
     background: #000;
   }
 
-  /* Skip */
   .skip {
     font-size: 18px;
     color: #000;
     font-weight: bold;
   }
 
-  /* 🔊 Volume */
+  /* Volume button with SVG inspired styling */
   .volume-container {
     position: relative;
   }
@@ -123,63 +114,29 @@
     align-items: center;
     justify-content: center;
   }
-
-  .volume-icon {
-    width: 14px;
-    height: 10px;
-    background: #000;
-    position: relative;
+  .volume-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: #000;
   }
 
-  .volume-icon::before {
-    content: "";
-    position: absolute;
-    left: -6px;
-    top: 1px;
-    width: 0;
-    height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-right: 6px solid #000;
-  }
-
-  .volume-icon::after {
-    content: "";
-    position: absolute;
-    right: -6px;
-    top: 0;
-    width: 6px;
-    height: 10px;
-    border-right: 2px solid #000;
-    border-radius: 50%;
-  }
-
-  /* Volume slider dropdown */
-  .volume-slider-wrapper {
+  .volume-slider {
     display: none;
     position: absolute;
     top: 52px;
     left: 50%;
     transform: translateX(-50%);
-    background: #1b1b1b;
-    padding: 8px;
-    border-radius: 8px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
-  }
-
-  .volume-slider {
     width: 100px;
-    accent-color: #fff;
+    background: transparent;
   }
-
-  .volume-container.open .volume-slider-wrapper {
+  .volume-container.open .volume-slider {
     display: block;
   }
-
-  @media (max-width: 768px) {
-    .player {
-      max-width: 95%;
-    }
+  .volume-slider::-webkit-slider-thumb {
+    background: #fff;
+  }
+  .volume-slider::-moz-range-thumb {
+    background: #fff;
   }
 </style>
 </head>
@@ -202,21 +159,27 @@
       <div class="play-icon" id="playIcon"></div>
     </button>
 
-    <!-- 🔊 Volume -->
     <div class="volume-container" id="volumeContainer">
       <button class="volume-btn" onclick="toggleVolume(event)">
-        <div class="volume-icon"></div>
+        <!-- Speaker / volume icon inspired by typical UI icons -->
+        <svg id="volIcon" viewBox="0 0 24 24">
+          <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
+          <path id="wave1" d="M14.5 12c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03z"></path>
+          <path id="wave2" d="M16.5 12c0 2.5-1.46 4.67-3.5 5.77v-2.06c1.44-.93 2.5-2.61 2.5-4.71s-1.06-3.78-2.5-4.71V6.23c2.04 1.1 3.5 3.27 3.5 5.77z"></path>
+        </svg>
       </button>
-      <div class="volume-slider-wrapper">
-        <input
-          type="range"
-          class="volume-slider"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-          oninput="setVolume(this.value)">
-      </div>
+
+      <input
+        type="range"
+        class="volume-slider"
+        min="0"
+        max="1"
+        step="0.01"
+        value="1"
+        onpointerdown="volumeDragging = true"
+        onpointerup="volumeDragging = false"
+        onpointermove="changeVolumeWhileDrag(event)"
+        onchange="setVolume(this.value)">
     </div>
 
     <button class="btn" onclick="nextSegment()">
@@ -239,11 +202,11 @@
   const timeline = document.getElementById("timeline");
   const progress = document.getElementById("progress");
   const volumeContainer = document.getElementById("volumeContainer");
+  const volumeSlider = document.querySelector(".volume-slider");
+  const volIcon = document.getElementById("volIcon");
 
-  let durations = [];
-  let offsets = [];
-  let totalDuration = 0;
-  let currentIndex = 0;
+  let durations = [], offsets = [], totalDuration = 0, currentIndex = 0;
+  let volumeDragging = false;
 
   Promise.all(tracks.map(t =>
     new Promise(res => {
@@ -319,17 +282,32 @@
     if (currentIndex < tracks.length - 1) loadTrack(currentIndex + 1);
   }
 
-  function setVolume(v) {
-    audio.volume = v;
-  }
-
   function toggleVolume(e) {
     e.stopPropagation();
     volumeContainer.classList.toggle("open");
   }
 
-  document.addEventListener("click", () => {
-    volumeContainer.classList.remove("open");
+  function setVolume(v) {
+    audio.volume = v;
+    volumeSlider.value = v;
+    updateVolIcon(v);
+  }
+
+  function changeVolumeWhileDrag(e) {
+    if (!volumeDragging) return;
+    setVolume(e.target.value);
+  }
+
+  function updateVolIcon(v) {
+    // hide large waves if low volume
+    volIcon.querySelector("#wave2").style.display = v < 0.4 ? "none" : "";
+    volIcon.querySelector("#wave1").style.display = v < 0.2 ? "none" : "";
+  }
+
+  document.addEventListener("click", (ev) => {
+    if (!volumeContainer.contains(ev.target)) {
+      volumeContainer.classList.remove("open");
+    }
   });
 </script>
 
