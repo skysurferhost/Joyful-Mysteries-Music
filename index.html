@@ -42,7 +42,7 @@
   .timeline-progress {
     height: 100%;
     width: 0%;
-    background: #f7941d;
+    background: #fff;
     border-radius: 4px;
   }
 
@@ -51,16 +51,16 @@
     top: -4px;
     width: 2px;
     height: 14px;
-    background: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.4);
   }
 
   /* Controls */
   .controls {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 16px;
-    margin-top: 10px;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 8px;
   }
 
   .btn {
@@ -79,27 +79,28 @@
     transform: scale(0.95);
   }
 
-  /* Play button icon */
-  .play-icon,
-  .pause-icon {
-    width: 14px;
-    height: 14px;
-    background: #000;
+  /* Play / Pause icons */
+  .play-icon {
+    width: 0;
+    height: 0;
+    border-left: 14px solid #000;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    margin-left: 2px;
   }
 
   .pause-icon {
-    background: none;
     display: flex;
     gap: 4px;
   }
 
   .pause-icon span {
     width: 5px;
-    height: 14px;
+    height: 16px;
     background: #000;
   }
 
-  /* Prev / Next icons */
+  /* Skip buttons */
   .skip {
     font-size: 18px;
     color: #000;
@@ -107,30 +108,45 @@
   }
 
   /* Volume */
-  .volume-container {
-    position: relative;
+  .volume-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .volume-icon {
+    position: relative;
     width: 14px;
-    height: 14px;
-    border-left: 6px solid #000;
+    height: 12px;
+    background: #000;
+  }
+
+  .volume-icon::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 2px;
+    width: 0;
+    height: 0;
     border-top: 4px solid transparent;
     border-bottom: 4px solid transparent;
+    border-right: 6px solid #000;
+  }
+
+  .volume-icon::after {
+    content: "";
+    position: absolute;
+    right: -6px;
+    top: 1px;
+    width: 6px;
+    height: 10px;
+    border-right: 2px solid #000;
+    border-radius: 50%;
   }
 
   .volume-slider {
-    display: none;
-    position: absolute;
-    right: -34px;
-    bottom: 50%;
-    transform: translateY(50%) rotate(-90deg);
-    width: 90px;
-    accent-color: #f7941d;
-  }
-
-  .volume-container.active .volume-slider {
-    display: block;
+    width: 80px;
+    accent-color: #fff;
   }
 
   @media (max-width: 768px) {
@@ -159,10 +175,8 @@
       <div class="play-icon" id="playIcon"></div>
     </button>
 
-    <div class="volume-container" id="volumeBox">
-      <button class="btn" onclick="toggleVolume()">
-        <div class="volume-icon"></div>
-      </button>
+    <div class="volume-wrapper">
+      <div class="volume-icon"></div>
       <input
         type="range"
         class="volume-slider"
@@ -189,7 +203,6 @@
 
   const audio = document.getElementById("audio");
   const titleEl = document.getElementById("trackTitle");
-  const playBtn = document.getElementById("playBtn");
   const playIcon = document.getElementById("playIcon");
   const timeline = document.getElementById("timeline");
   const progress = document.getElementById("progress");
@@ -271,10 +284,6 @@
 
   function nextSegment() {
     if (currentIndex < tracks.length - 1) loadTrack(currentIndex + 1);
-  }
-
-  function toggleVolume() {
-    document.getElementById("volumeBox").classList.toggle("active");
   }
 
   function setVolume(v) {
