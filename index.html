@@ -16,26 +16,51 @@
     max-width: 420px;
     margin: 20px auto;
     background: #1b1b1b;
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
 
   .track-title {
     text-align: center;
-    font-size: 16px;
-    margin-bottom: 12px;
+    font-size: 15px;
+    margin-bottom: 10px;
+    min-height: 20px;
   }
 
-  audio {
+  /* Timeline */
+  .timeline {
+    position: relative;
     width: 100%;
+    height: 6px;
+    background: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 14px 0;
   }
 
+  .timeline-progress {
+    height: 100%;
+    width: 0%;
+    background: #fff;
+    border-radius: 4px;
+  }
+
+  .marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 14px;
+    background: rgba(255,255,255,0.6);
+  }
+
+  /* Controls */
   .controls {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 14px;
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   .controls button {
@@ -49,20 +74,26 @@
     cursor: pointer;
   }
 
-  .playlist {
-    margin-top: 16px;
-    border-top: 1px solid #333;
+  /* Volume */
+  .volume-container {
+    position: relative;
   }
 
-  .playlist-item {
-    padding: 10px;
-    cursor: pointer;
-    border-bottom: 1px solid #333;
-    font-size: 14px;
+  .volume-slider {
+    display: none;
+    position: absolute;
+    bottom: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
   }
 
-  .playlist-item.active {
-    background: #333;
+  .volume-container.active .volume-slider {
+    display: block;
+  }
+
+  input[type="range"] {
+    width: 100%;
   }
 
   @media (max-width: 768px) {
@@ -78,68 +109,128 @@
 <div class="player">
   <div class="track-title" id="trackTitle"></div>
 
-  <audio id="audio" controls preload="metadata"></audio>
-
-  <div class="controls">
-    <button onclick="prevTrack()">⏮</button>
-    <button onclick="playPause()">▶️</button>
-    <button onclick="nextTrack()">⏭</button>
+  <!-- Timeline -->
+  <div class="timeline" id="timeline">
+    <div class="timeline-progress" id="progress"></div>
   </div>
 
-  <div class="playlist" id="playlist"></div>
+  <!-- Controls -->
+  <div class="controls">
+    <button onclick="prevSegment()">⏮</button>
+    <button onclick="playPause()">▶️</button>
+
+    <div class="volume-container" id="volumeBox">
+      <button onclick="toggleVolume()">🔊</button>
+      <input
+        type="range"
+        class="volume-slider"
+        min="0"
+        max="1"
+        step="0.01"
+        value="1"
+        oninput="setVolume(this.value)">
+    </div>
+
+    <button onclick="nextSegment()">⏭</button>
+  </div>
 </div>
+
+<audio id="audio" preload="metadata"></audio>
 
 <script>
   const tracks = [
-    {
-      title: "Joyful Mysteries Reflective Music 1",
-      src: "./Joyful-Mysteries-1.mp3"
-    },
-    {
-      title: "Joyful Mysteries Reflective Music 2",
-      src: "./Joyful-Mysteries-2.mp3"
-    }
+    { title: "Joyful Mysteries – Reflective Music I", src: "./Joyful-Mysteries-1.mp3" },
+    { title: "Joyful Mysteries – Reflective Music II", src: "./Joyful-Mysteries-2.mp3" }
   ];
 
-  let currentTrack = 0;
   const audio = document.getElementById("audio");
-  const title = document.getElementById("trackTitle");
-  const playlistEl = document.getElementById("playlist");
+  const titleEl = document.getElementById("trackTitle");
+  const timeline = document.getElementById("timeline");
+  const progress = document.getElementById("progress");
 
-  function loadTrack(index) {
-    currentTrack = index;
-    audio.src = tracks[index].src;
-    title.textContent = tracks[index].title;
+  let durations = [];
+  let offsets = [];
+  let totalDuration = 0;
+  let currentIndex = 0;
+
+  /* Preload durations */
+  Promise.all(tracks.map(track =>
+    new Promise(res => {
+      const a = new Audio(track.src);
+      a.addEventListener("loadedmetadata", () => res(a.duration));
+    })
+  )).then(times => {
+    durations = times;
+    offsets = times.map((_, i) =>
+      times.slice(0, i).reduce((a, b) => a + b, 0)
+    );
+    totalDuration = times.reduce((a, b) => a + b, 0);
+    drawMarkers();
+    loadTrack(0);
+  });
+
+  function drawMarkers() {
+    offsets.forEach(offset => {
+      const m = document.createElement("div");
+      m.className = "marker";
+      m.style.left = `${(offset / totalDuration) * 100}%`;
+      timeline.appendChild(m);
+    });
+  }
+
+  function loadTrack(i) {
+    currentIndex = i;
+    audio.src = tracks[i].src;
+    titleEl.textContent = tracks[i].title;
     audio.play();
-    updatePlaylist();
   }
 
   function playPause() {
     audio.paused ? audio.play() : audio.pause();
   }
 
-  function nextTrack() {
-    loadTrack((currentTrack + 1) % tracks.length);
+  audio.addEventListener("ended", () => {
+    if (currentIndex < tracks.length - 1) {
+      loadTrack(currentIndex + 1);
+    }
+  });
+
+  /* Timeline logic */
+  audio.addEventListener("timeupdate", () => {
+    const globalTime = offsets[currentIndex] + audio.currentTime;
+    progress.style.width = `${(globalTime / totalDuration) * 100}%`;
+  });
+
+  timeline.addEventListener("click", e => {
+    const pct = e.offsetX / timeline.clientWidth;
+    let time = pct * totalDuration;
+
+    let i = offsets.findIndex((o, idx) =>
+      time >= o && time < o + durations[idx]
+    );
+
+    if (i === -1) i = tracks.length - 1;
+
+    loadTrack(i);
+    audio.currentTime = time - offsets[i];
+  });
+
+  function prevSegment() {
+    if (currentIndex > 0) loadTrack(currentIndex - 1);
   }
 
-  function prevTrack() {
-    loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
+  function nextSegment() {
+    if (currentIndex < tracks.length - 1) loadTrack(currentIndex + 1);
   }
 
-  audio.addEventListener("ended", nextTrack);
-
-  function updatePlaylist() {
-    playlistEl.innerHTML = "";
-    tracks.forEach((track, i) => {
-      const item = document.createElement("div");
-      item.textContent = track.title;
-      item.className = "playlist-item" + (i === currentTrack ? " active" : "");
-      item.onclick = () => loadTrack(i);
-      playlistEl.appendChild(item);
-    });
+  /* Volume */
+  function toggleVolume() {
+    document.getElementById("volumeBox").classList.toggle("active");
   }
 
-  loadTrack(0);
+  function setVolume(v) {
+    audio.volume = v;
+  }
 </script>
 
 </body>
