@@ -42,7 +42,7 @@
   .timeline-progress {
     height: 100%;
     width: 0%;
-    background: #fff;
+    background: #f7941d;
     border-radius: 4px;
   }
 
@@ -51,7 +51,7 @@
     top: -4px;
     width: 2px;
     height: 14px;
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.5);
   }
 
   /* Controls */
@@ -64,7 +64,7 @@
   }
 
   .controls button {
-    background: #fff;
+    background: #f7941d;
     color: #000;
     border: none;
     border-radius: 50%;
@@ -74,18 +74,27 @@
     cursor: pointer;
   }
 
+  .controls button:active {
+    transform: scale(0.95);
+  }
+
   /* Volume */
   .volume-container {
     position: relative;
   }
 
+  .volume-btn {
+    background: #f7941d;
+  }
+
   .volume-slider {
     display: none;
     position: absolute;
-    bottom: 52px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
+    right: -34px;
+    bottom: 50%;
+    transform: translateY(50%) rotate(-90deg);
+    width: 90px;
+    accent-color: #f7941d;
   }
 
   .volume-container.active .volume-slider {
@@ -93,7 +102,7 @@
   }
 
   input[type="range"] {
-    width: 100%;
+    cursor: pointer;
   }
 
   @media (max-width: 768px) {
@@ -120,7 +129,7 @@
     <button onclick="playPause()">▶️</button>
 
     <div class="volume-container" id="volumeBox">
-      <button onclick="toggleVolume()">🔊</button>
+      <button class="volume-btn" onclick="toggleVolume()">🔊</button>
       <input
         type="range"
         class="volume-slider"
@@ -153,7 +162,6 @@
   let totalDuration = 0;
   let currentIndex = 0;
 
-  /* Preload durations */
   Promise.all(tracks.map(track =>
     new Promise(res => {
       const a = new Audio(track.src);
@@ -195,7 +203,6 @@
     }
   });
 
-  /* Timeline logic */
   audio.addEventListener("timeupdate", () => {
     const globalTime = offsets[currentIndex] + audio.currentTime;
     progress.style.width = `${(globalTime / totalDuration) * 100}%`;
@@ -223,7 +230,6 @@
     if (currentIndex < tracks.length - 1) loadTrack(currentIndex + 1);
   }
 
-  /* Volume */
   function toggleVolume() {
     document.getElementById("volumeBox").classList.toggle("active");
   }
