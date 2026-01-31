@@ -30,13 +30,13 @@
 
   /* Timeline */
   .timeline {
-    position: relative;
     width: 100%;
     height: 6px;
     background: #333;
     border-radius: 4px;
     cursor: pointer;
     margin: 14px 0;
+    position: relative;
   }
 
   .timeline-progress {
@@ -59,23 +59,51 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     margin-top: 10px;
   }
 
-  .controls button {
-    background: #f7941d;
-    color: #000;
-    border: none;
-    border-radius: 50%;
+  .btn {
     width: 44px;
     height: 44px;
-    font-size: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .controls button:active {
+  .btn:active {
     transform: scale(0.95);
+  }
+
+  /* Play button icon */
+  .play-icon,
+  .pause-icon {
+    width: 14px;
+    height: 14px;
+    background: #000;
+  }
+
+  .pause-icon {
+    background: none;
+    display: flex;
+    gap: 4px;
+  }
+
+  .pause-icon span {
+    width: 5px;
+    height: 14px;
+    background: #000;
+  }
+
+  /* Prev / Next icons */
+  .skip {
+    font-size: 18px;
+    color: #000;
+    font-weight: bold;
   }
 
   /* Volume */
@@ -83,8 +111,12 @@
     position: relative;
   }
 
-  .volume-btn {
-    background: #f7941d;
+  .volume-icon {
+    width: 14px;
+    height: 14px;
+    border-left: 6px solid #000;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
   }
 
   .volume-slider {
@@ -101,10 +133,6 @@
     display: block;
   }
 
-  input[type="range"] {
-    cursor: pointer;
-  }
-
   @media (max-width: 768px) {
     .player {
       max-width: 95%;
@@ -118,18 +146,23 @@
 <div class="player">
   <div class="track-title" id="trackTitle"></div>
 
-  <!-- Timeline -->
   <div class="timeline" id="timeline">
     <div class="timeline-progress" id="progress"></div>
   </div>
 
-  <!-- Controls -->
   <div class="controls">
-    <button onclick="prevSegment()">⏮</button>
-    <button onclick="playPause()">▶️</button>
+    <button class="btn" onclick="prevSegment()">
+      <span class="skip">⟨</span>
+    </button>
+
+    <button class="btn" onclick="playPause()" id="playBtn">
+      <div class="play-icon" id="playIcon"></div>
+    </button>
 
     <div class="volume-container" id="volumeBox">
-      <button class="volume-btn" onclick="toggleVolume()">🔊</button>
+      <button class="btn" onclick="toggleVolume()">
+        <div class="volume-icon"></div>
+      </button>
       <input
         type="range"
         class="volume-slider"
@@ -140,7 +173,9 @@
         oninput="setVolume(this.value)">
     </div>
 
-    <button onclick="nextSegment()">⏭</button>
+    <button class="btn" onclick="nextSegment()">
+      <span class="skip">⟩</span>
+    </button>
   </div>
 </div>
 
@@ -154,6 +189,8 @@
 
   const audio = document.getElementById("audio");
   const titleEl = document.getElementById("trackTitle");
+  const playBtn = document.getElementById("playBtn");
+  const playIcon = document.getElementById("playIcon");
   const timeline = document.getElementById("timeline");
   const progress = document.getElementById("progress");
 
@@ -162,26 +199,24 @@
   let totalDuration = 0;
   let currentIndex = 0;
 
-  Promise.all(tracks.map(track =>
+  Promise.all(tracks.map(t =>
     new Promise(res => {
-      const a = new Audio(track.src);
-      a.addEventListener("loadedmetadata", () => res(a.duration));
+      const a = new Audio(t.src);
+      a.onloadedmetadata = () => res(a.duration);
     })
   )).then(times => {
     durations = times;
-    offsets = times.map((_, i) =>
-      times.slice(0, i).reduce((a, b) => a + b, 0)
-    );
+    offsets = times.map((_, i) => times.slice(0, i).reduce((a, b) => a + b, 0));
     totalDuration = times.reduce((a, b) => a + b, 0);
     drawMarkers();
     loadTrack(0);
   });
 
   function drawMarkers() {
-    offsets.forEach(offset => {
+    offsets.forEach(o => {
       const m = document.createElement("div");
       m.className = "marker";
-      m.style.left = `${(offset / totalDuration) * 100}%`;
+      m.style.left = `${(o / totalDuration) * 100}%`;
       timeline.appendChild(m);
     });
   }
@@ -191,36 +226,44 @@
     audio.src = tracks[i].src;
     titleEl.textContent = tracks[i].title;
     audio.play();
+    setPauseIcon();
   }
 
   function playPause() {
-    audio.paused ? audio.play() : audio.pause();
+    if (audio.paused) {
+      audio.play();
+      setPauseIcon();
+    } else {
+      audio.pause();
+      setPlayIcon();
+    }
   }
 
-  audio.addEventListener("ended", () => {
-    if (currentIndex < tracks.length - 1) {
-      loadTrack(currentIndex + 1);
-    }
-  });
+  function setPlayIcon() {
+    playIcon.className = "play-icon";
+    playIcon.innerHTML = "";
+  }
+
+  function setPauseIcon() {
+    playIcon.className = "pause-icon";
+    playIcon.innerHTML = "<span></span><span></span>";
+  }
+
+  audio.addEventListener("ended", nextSegment);
 
   audio.addEventListener("timeupdate", () => {
     const globalTime = offsets[currentIndex] + audio.currentTime;
     progress.style.width = `${(globalTime / totalDuration) * 100}%`;
   });
 
-  timeline.addEventListener("click", e => {
+  timeline.onclick = e => {
     const pct = e.offsetX / timeline.clientWidth;
-    let time = pct * totalDuration;
-
-    let i = offsets.findIndex((o, idx) =>
-      time >= o && time < o + durations[idx]
-    );
-
+    let t = pct * totalDuration;
+    let i = offsets.findIndex((o, idx) => t >= o && t < o + durations[idx]);
     if (i === -1) i = tracks.length - 1;
-
     loadTrack(i);
-    audio.currentTime = time - offsets[i];
-  });
+    audio.currentTime = t - offsets[i];
+  };
 
   function prevSegment() {
     if (currentIndex > 0) loadTrack(currentIndex - 1);
