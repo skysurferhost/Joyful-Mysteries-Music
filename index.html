@@ -143,18 +143,19 @@
     display: block;
   }
 
-  /* ✅ WHITE VOLUME SLIDER */
+  /* Slider track = white */
   .volume-slider::-webkit-slider-runnable-track {
     height: 4px;
     background: #fff;
     border-radius: 4px;
   }
 
+  /* Slider thumb = BLACK */
   .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 12px;
     height: 12px;
-    background: #fff;
+    background: #000;
     border-radius: 50%;
     margin-top: -4px;
     cursor: pointer;
@@ -168,7 +169,7 @@
   .volume-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background: #fff;
+    background: #000;
     border-radius: 50%;
     cursor: pointer;
   }
@@ -214,22 +215,15 @@
   </div>
 </div>
 
-<audio id="audio" preload="metadata"></audio>
+<audio id="audio" preload="auto"></audio>
 
 <script>
-  /* =====================================================
-     🎵 ADD / MANAGE MUSIC HERE
-     To add more tracks later, copy one block and paste it
-     ===================================================== */
   const tracks = [
     { title: "Joyful Mysteries – Reflective Music I", src: "./Joyful-Mysteries-1.mp3" },
     { title: "Joyful Mysteries – Reflective Music II", src: "./Joyful-Mysteries-2.mp3" },
     { title: "Joyful Mysteries – Reflective Music III", src: "./Joyful-Mysteries-3.mp3" },
     { title: "Joyful Mysteries – Reflective Music IV", src: "./Joyful-Mysteries-4.mp3" },
     { title: "Joyful Mysteries – Reflective Music V", src: "./Joyful-Mysteries-5.mp3" }
-
-    // 👉 Add more tracks below like this:
-    // { title: "Joyful Mysteries – Reflective Music VI", src: "./Joyful-Mysteries-6.mp3" }
   ];
 
   const audio = document.getElementById("audio");
@@ -253,6 +247,11 @@
     totalDuration = times.reduce((a, b) => a + b, 0);
     drawMarkers();
     loadTrack(0);
+
+    // 🔊 Attempt autoplay
+    audio.play().catch(() => {
+      document.addEventListener("click", () => audio.play(), { once: true });
+    });
   });
 
   function drawMarkers() {
@@ -290,15 +289,6 @@
     const globalTime = offsets[currentIndex] + audio.currentTime;
     progress.style.width = `${(globalTime / totalDuration) * 100}%`;
   });
-
-  timeline.onclick = e => {
-    const pct = e.offsetX / timeline.clientWidth;
-    let t = pct * totalDuration;
-    let i = offsets.findIndex((o, idx) => t >= o && t < o + durations[idx]);
-    if (i === -1) i = tracks.length - 1;
-    loadTrack(i);
-    audio.currentTime = t - offsets[i];
-  };
 
   function prevSegment() {
     if (currentIndex > 0) loadTrack(currentIndex - 1);
