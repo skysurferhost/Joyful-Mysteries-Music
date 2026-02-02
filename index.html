@@ -113,8 +113,17 @@
     fill: #000;
   }
 
-  .volume-slider {
-    width: 90px;
+ .volume-slider {
+    display: none;
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+  }
+
+  .volume-container.open .volume-slider {
+    display: block;
   }
 
   .volume-slider::-webkit-slider-runnable-track {
