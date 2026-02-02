@@ -13,7 +13,7 @@
   }
 
   .player {
-    max-width: 420px;
+    max-width: 480px;
     margin: 20px auto;
     background: #1b1b1b;
     border-radius: 14px;
@@ -21,20 +21,13 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
 
-  .track-title {
-    text-align: center;
-    font-size: 15px;
-    margin-bottom: 10px;
-    min-height: 20px;
-  }
-
+  /* ===== TIMELINE ===== */
   .timeline {
-    width: 100%;
+    flex: 1;
     height: 6px;
     background: #333;
     border-radius: 4px;
     cursor: pointer;
-    margin: 14px 0;
     position: relative;
   }
 
@@ -54,12 +47,12 @@
     background: rgba(255,255,255,0.4);
   }
 
+  /* ===== CONTROLS ROW ===== */
   .controls {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 14px;
-    margin-top: 8px;
+    gap: 12px;
+    margin-top: 14px;
   }
 
   .btn {
@@ -72,6 +65,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
   .play-icon {
@@ -94,14 +88,11 @@
     background: #000;
   }
 
-  .skip {
-    font-size: 18px;
-    color: #000;
-    font-weight: bold;
-  }
-
+  /* ===== VOLUME ===== */
   .volume-container {
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .volume-btn {
@@ -123,16 +114,7 @@
   }
 
   .volume-slider {
-    display: none;
-    position: absolute;
-    top: 52px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-  }
-
-  .volume-container.open .volume-slider {
-    display: block;
+    width: 90px;
   }
 
   .volume-slider::-webkit-slider-runnable-track {
@@ -156,21 +138,21 @@
 <body>
 
 <div class="player">
-  <div class="track-title" id="trackTitle"></div>
-
-  <div class="timeline" id="timeline">
-    <div class="timeline-progress" id="progress"></div>
-  </div>
 
   <div class="controls">
-    <button class="btn" onclick="prevSegment()"><span class="skip">⟨</span></button>
-
+    <!-- PLAY / PAUSE (LEFT) -->
     <button class="btn" onclick="playPause()">
       <div class="play-icon" id="playIcon"></div>
     </button>
 
-    <div class="volume-container" id="volumeContainer">
-      <button class="volume-btn" onclick="toggleVolume(event)">
+    <!-- TIMELINE (CENTER) -->
+    <div class="timeline" id="timeline">
+      <div class="timeline-progress" id="progress"></div>
+    </div>
+
+    <!-- VOLUME (RIGHT) -->
+    <div class="volume-container">
+      <button class="volume-btn">
         <svg id="volIcon" viewBox="0 0 24 24">
           <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
           <path id="wave1" d="M14.5 12c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03z"></path>
@@ -178,30 +160,28 @@
         </svg>
       </button>
 
-      <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1" oninput="setVolume(this.value)">
+      <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1"
+        oninput="setVolume(this.value)">
     </div>
-
-    <button class="btn" onclick="nextSegment()"><span class="skip">⟩</span></button>
   </div>
+
 </div>
 
 <audio id="audio" preload="auto"></audio>
 
 <script>
   const tracks = [
-    { title: "Joyful Mysteries – Reflective Music I", src: "./Joyful-Mysteries-1.mp3" },
-    { title: "Joyful Mysteries – Reflective Music II", src: "./Joyful-Mysteries-2.mp3" },
-    { title: "Joyful Mysteries – Reflective Music III", src: "./Joyful-Mysteries-3.mp3" },
-    { title: "Joyful Mysteries – Reflective Music IV", src: "./Joyful-Mysteries-4.mp3" },
-    { title: "Joyful Mysteries – Reflective Music V", src: "./Joyful-Mysteries-5.mp3" }
+    { src: "./Joyful-Mysteries-1.mp3" },
+    { src: "./Joyful-Mysteries-2.mp3" },
+    { src: "./Joyful-Mysteries-3.mp3" },
+    { src: "./Joyful-Mysteries-4.mp3" },
+    { src: "./Joyful-Mysteries-5.mp3" }
   ];
 
   const audio = document.getElementById("audio");
-  const titleEl = document.getElementById("trackTitle");
   const playIcon = document.getElementById("playIcon");
   const timeline = document.getElementById("timeline");
   const progress = document.getElementById("progress");
-  const volumeContainer = document.getElementById("volumeContainer");
   const volIcon = document.getElementById("volIcon");
 
   let durations = [], offsets = [], totalDuration = 0;
@@ -234,7 +214,6 @@
   function loadTrack(i) {
     currentIndex = i;
     audio.src = tracks[i].src;
-    titleEl.textContent = tracks[i].title;
     audio.play();
     setPauseIcon();
   }
@@ -256,7 +235,9 @@
   audio.addEventListener("timeupdate", () => {
     const globalTime = offsets[currentIndex] + audio.currentTime;
     progress.style.width = `${(globalTime / totalDuration) * 100}%`;
-    audio.addEventListener("ended", nextSegment);
+    if (audio.currentTime >= audio.duration && currentIndex < tracks.length - 1) {
+      loadTrack(currentIndex + 1);
+    }
   });
 
   function seekTo(percent) {
@@ -288,28 +269,11 @@
   timeline.addEventListener("touchmove", e => dragging && handleSeek(e.touches[0].clientX), { passive: true });
   window.addEventListener("touchend", () => dragging = false);
 
-  function prevSegment() {
-    if (currentIndex > 0) loadTrack(currentIndex - 1);
-  }
-
-  function nextSegment() {
-    if (currentIndex < tracks.length - 1) loadTrack(currentIndex + 1);
-  }
-
-  function toggleVolume(e) {
-    e.stopPropagation();
-    volumeContainer.classList.toggle("open");
-  }
-
   function setVolume(v) {
     audio.volume = v;
     volIcon.querySelector("#wave2").style.display = v < 0.4 ? "none" : "";
     volIcon.querySelector("#wave1").style.display = v < 0.2 ? "none" : "";
   }
-
-  document.addEventListener("click", e => {
-    if (!volumeContainer.contains(e.target)) volumeContainer.classList.remove("open");
-  });
 </script>
 
 </body>
